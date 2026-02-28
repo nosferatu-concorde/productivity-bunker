@@ -155,11 +155,7 @@ export default class TodoScene extends BaseScene {
         this.timeLeft = remaining;
         this._renderTimer();
         if (remaining <= 0) {
-          this.scene.start('BunkerScene', {
-            taskDescription: this.taskDescription,
-            steps: this.steps,
-            doneStandard: this.doneStandard,
-          });
+          this.scene.start('InterrogationScene');
         }
       },
     });
