@@ -1,5 +1,5 @@
 import BaseScene from './BaseScene.js';
-import MistralAPI from '../systems/MistralAPI.js';
+import MistralAPI, { FALLBACKS } from '../systems/MistralAPI.js';
 
 const C = {
   bg: 0xffffff,
@@ -7,8 +7,6 @@ const C = {
   text: '#222222',
   dim: '#999999',
   green: '#222222',
-  red: '#cc0000',
-  orange: '#cc5500',
 };
 
 const PX = 10;
@@ -17,6 +15,15 @@ const PW = 780;
 const PH = 580;
 const INPUT_H = 28;
 const TYPEWRITER_MS = 18;
+const MAX_INPUT = 150;
+
+const STEP_LABELS = ['', 'TASK', 'STEP 1/3', 'STEP 2/3', 'STEP 3/3', 'DONE STD'];
+
+// Steps that skip the API and use hardcoded Overlord lines
+const HARDCODED = {
+  step2: 'Logged. Step 2 — what is it, citizen?',
+  step3: 'Logged. Step 3 — the final action. Make it count.',
+};
 
 export default class InterrogationScene extends BaseScene {
   constructor() {
@@ -26,21 +33,27 @@ export default class InterrogationScene extends BaseScene {
   create() {
     super.create();
 
-    this.history = [];
-    this.tasks = [];
+    this.step = 0;
+    this.taskDescription = '';
+    this.step1 = '';
+    this.step2 = '';
+    this.step3 = '';
+    this.doneStandard = '';
+    this.conversationHistory = [];
+
     this.chatLines = [];
     this.inputBuffer = '';
     this.inputDisabled = true;
-    this.waiting = false;
-    this.timerRunning = false;
-    this.turn = 0;
-    this.maxTurns = 3;
 
     this._buildLayout();
     this._buildInput();
 
     this.mistral = new MistralAPI();
-    this._overlordSpeak('The worker has entered the interrogation chamber. This is attempt 1 of 3. What are you building in the next 25 minutes? Be specific.');
+
+    this._typewrite('OVERLORD: Good citizen, what is your contribution today, an excuse to stay alive?', () => {
+      this._showHint();
+      this.inputDisabled = false;
+    });
   }
 
   // ─── Layout ────────────────────────────────────────────────────────────────
@@ -50,18 +63,15 @@ export default class InterrogationScene extends BaseScene {
 
     this.add.rectangle(0, 0, width, height, C.bg).setOrigin(0, 0);
 
-    // panel
     this._border(PX, PY, PW, PH);
     this.add.text(PX + 10, PY + 8, '[ OVERLORD TRANSMISSION ]', {
       fontFamily: 'monospace', fontSize: '13px', color: C.green,
     });
 
-    // turn counter — top right
-    this.turnText = this.add.text(PX + PW - 10, PY + 8, 'ATTEMPT 0/3', {
+    this.stepLabel = this.add.text(PX + PW - 10, PY + 8, '', {
       fontFamily: 'monospace', fontSize: '13px', color: C.dim,
     }).setOrigin(1, 0);
 
-    // chat output
     this.chatText = this.add.text(PX + 10, PY + 30, '', {
       fontFamily: 'monospace',
       fontSize: '20px',
@@ -70,41 +80,18 @@ export default class InterrogationScene extends BaseScene {
       lineSpacing: 8,
     });
 
+    this.hintText = this.add.text(PX + 10, PY + 110, '(What is your next task? Give a short description for it.)', {
+      fontFamily: 'monospace',
+      fontSize: '20px',
+      color: C.dim,
+      wordWrap: { width: PW - 20 },
+      lineSpacing: 8,
+    }).setAlpha(0);
   }
 
   _border(x, y, w, h) {
     this.add.rectangle(x + w / 2, y + h / 2, w, h, C.bg)
       .setStrokeStyle(1, C.border);
-  }
-
-  _showModal(tasks) {
-    const cx = 400, cy = 300;
-    const mw = 500, mh = 260 + tasks.length * 24;
-
-    this.modalObjects = [];
-    const track = (obj) => { this.modalObjects.push(obj); return obj; };
-
-    track(this.add.rectangle(cx, cy, 800, 600, 0x000000, 0.88));
-    track(this.add.rectangle(cx, cy, mw, mh, 0xffffff).setStrokeStyle(1, C.border));
-    track(this.add.text(cx, cy - mh / 2 + 14, '[ YOUR DIRECTIVES ]', {
-      fontFamily: 'monospace', fontSize: '14px', color: C.green,
-    }).setOrigin(0.5, 0));
-
-    const taskStr = tasks.length
-      ? tasks.map((t, i) => `${i + 1}. ${t}`).join('\n')
-      : '(no tasks extracted)';
-
-    track(this.add.text(cx, cy - mh / 2 + 40, taskStr, {
-      fontFamily: 'monospace', fontSize: '15px', color: C.text,
-      wordWrap: { width: mw - 40 }, lineSpacing: 6,
-    }).setOrigin(0.5, 0));
-
-    const btn = track(this.add.text(0, cy + mh / 2 - 28, '[ START TIMER ]', {
-      fontFamily: 'monospace', fontSize: '18px', color: C.green,
-    }));
-    btn.setX(cx - btn.width / 2);
-    btn.setInteractive({ useHandCursor: true });
-    btn.on('pointerdown', () => this._startTimer());
   }
 
   // ─── Canvas Input ──────────────────────────────────────────────────────────
@@ -118,20 +105,19 @@ export default class InterrogationScene extends BaseScene {
       .setStrokeStyle(1, C.border);
 
     this.add.text(ix + 4, iy + 4, '>', {
-      fontFamily: 'monospace', fontSize: '13px', color: C.green,
+      fontFamily: 'monospace', fontSize: '20px', color: C.green,
     });
 
-    this.inputText = this.add.text(ix + 16, iy + 4, '', {
+    this.inputText = this.add.text(ix + 20, iy + 4, '', {
       fontFamily: 'monospace', fontSize: '20px', color: C.text,
     });
 
-    this.cursor = this.add.text(ix + 16, iy + 4, '_', {
+    this.cursor = this.add.text(ix + 20, iy + 4, '_', {
       fontFamily: 'monospace', fontSize: '20px', color: C.green,
     });
 
     this.time.addEvent({
-      delay: 500,
-      loop: true,
+      delay: 500, loop: true,
       callback: () => { this.cursor.setVisible(!this.cursor.visible); },
     });
 
@@ -140,9 +126,13 @@ export default class InterrogationScene extends BaseScene {
 
       if (e.key === 'Enter') {
         const val = this.inputBuffer.trim();
-        if (val) {
-          this.inputBuffer = '';
-          this._updateInputDisplay();
+        this.inputBuffer = '';
+        this._updateInputDisplay();
+        if (!val) {
+          this._typewrite('OVERLORD: Silence is not a directive, worker.', () => {
+            this.inputDisabled = false;
+          });
+        } else {
           this._playerSend(val);
         }
         return;
@@ -154,7 +144,7 @@ export default class InterrogationScene extends BaseScene {
         return;
       }
 
-      if (e.key.length === 1) {
+      if (e.key.length === 1 && this.inputBuffer.length < MAX_INPUT) {
         this.inputBuffer += e.key;
         this._updateInputDisplay();
       }
@@ -166,85 +156,137 @@ export default class InterrogationScene extends BaseScene {
     this.cursor.setX(this.inputText.x + this.inputText.width + 2);
   }
 
-  // ─── Chat logic ────────────────────────────────────────────────────────────
-
-  _overlordSpeak(prompt) {
-    this.waiting = true;
-    this.inputDisabled = true;
-    this.history.push({ role: 'user', content: prompt });
-    this._startWaitingDots();
-
-    this.mistral.send(this.history)
-      .then((res) => this._onResponse(res))
-      .catch((err) => {
-        this._stopWaitingDots();
-        this._appendChat(`[ ERROR ] ${err.message}`, C.red);
-        this.waiting = false;
-        this.inputDisabled = false;
-      });
-  }
+  // ─── Step machine ──────────────────────────────────────────────────────────
 
   _playerSend(text) {
-    this.turn = Math.min(this.turn + 1, this.maxTurns);
-    this.turnText.setText(`ATTEMPT ${this.turn}/${this.maxTurns}`)
-      .setColor(this.turn === this.maxTurns ? C.red : C.green);
+    this.step++;
+    this.stepLabel.setText(STEP_LABELS[this.step] || '');
+
+    if (this.step === 1) this.taskDescription = text;
+    if (this.step === 2) this.step1 = text;
+    if (this.step === 3) this.step2 = text;
+    if (this.step === 4) this.step3 = text;
+    if (this.step === 5) this.doneStandard = text;
+
+    this.tweens.killTweensOf(this.hintText);
+    this.hintText.setAlpha(0);
 
     this.chatLines = [];
     this._appendChat(`> ${text}`, C.dim);
-    const content = `This is attempt ${this.turn} of ${this.maxTurns}. Worker says: ${text}`;
-    this.history.push({ role: 'user', content });
-    this.waiting = true;
     this.inputDisabled = true;
     this._startWaitingDots();
 
-    this.mistral.send(this.history)
-      .then((res) => this._onResponse(res))
-      .catch((err) => {
-        this._stopWaitingDots();
-        this._appendChat(`[ ERROR ] ${err.message}`, C.red);
-        this.waiting = false;
-        this.inputDisabled = false;
-      });
+    const prompt = this._buildPrompt(this.step, text);
+    const hardcoded = HARDCODED[`step${this.step}`];
+
+    if (hardcoded) {
+      // Skip API — respond instantly, still record to history for LLM context later
+      this.time.delayedCall(400, () => this._onResponse(prompt, hardcoded));
+    } else {
+      this.mistral.sendStep(prompt, this.conversationHistory)
+        .then((msg) => this._onResponse(prompt, msg))
+        .catch(() => this._onResponse(prompt, FALLBACKS[`step${this.step}`] || ''));
+    }
   }
 
-  _onResponse(message) {
+  _onResponse(userPrompt, message) {
     this._stopWaitingDots();
+    this.conversationHistory.push({ role: 'user', content: userPrompt });
+    this.conversationHistory.push({ role: 'assistant', content: message });
     this.chatLines = [];
-    this.history.push({ role: 'assistant', content: message });
 
-    const isDone = this.turn >= this.maxTurns;
     this._typewrite(`OVERLORD: ${message}`, () => {
-      this.waiting = false;
-      if (!isDone) {
-        this.inputDisabled = false;
+      if (this.step === 5) {
+        this.time.delayedCall(1500, () => this._showStartButton());
       } else {
-        this._extractTasks();
+        if (this.step === 1) {
+          this.hintText.setText('(Split the task in three small parts. What is task 1?)');
+          this._showHint();
+        } else if (this.step === 2) {
+          this.hintText.setText('(Split the task in three small parts. What is task 2?)');
+          this._showHint();
+        } else if (this.step === 3) {
+          this.hintText.setText('(Split the task in three small parts. What is task 3?)');
+          this._showHint();
+        } else if (this.step === 4) {
+          this.hintText.setText('(What does good enough look like? When is this task done?)');
+          this._showHint();
+        }
+        this.inputDisabled = false;
       }
     });
   }
 
-  _extractTasks() {
-    this._appendChat('[ COMPILING DIRECTIVES... ]', C.dim);
-    const userOnly = this.history.filter(m => m.role === 'user');
-    this.mistral.extractTasks(userOnly)
-      .then((tasks) => {
-        this._removeLastLine();
-        this.tasks = tasks;
-        this._showModal(tasks);
-      })
-      .catch(() => {
-        this._removeLastLine();
-        this._showModal([]);
-      });
+  _buildPrompt(step, playerInput) {
+    const { taskDescription, step1, step2 } = this;
+    switch (step) {
+      case 1:
+        return `Task logged: "${playerInput}". Coldly acknowledge it in one sentence. Then ask what step 1 is. Orwellian tone, no warmth. 2 sentences.`;
+      case 2:
+        return `Task: "${taskDescription}". Step 1: "${playerInput}".`;
+      case 3:
+        return `Step 2: "${playerInput}".`;
+      case 4:
+        return `Task: "${taskDescription}". Steps: "${step1}" / "${step2}" / "${playerInput}". All steps logged. Command them to close all distractions now. Ask what good enough looks like for this task. 2 sentences.`;
+      case 5:
+        return `Task: "${taskDescription}". Steps: "${step1}" / "${step2}" / "${this.step3}". Done standard: "${playerInput}". Deliver the final sendoff. Good enough ships, perfect does not. 25 minutes. End with exactly: "DIRECTIVE ACCEPTED. TIMER INITIATED." 2 sentences.`;
+      default:
+        return playerInput;
+    }
   }
+
+  // ─── Start button ──────────────────────────────────────────────────────────
+
+  _showStartButton() {
+    const { width, height } = this.scale;
+    const btn = this.add.text(0, height / 2 + 60, '[ INITIATE WORK SEQUENCE ]', {
+      fontFamily: 'monospace', fontSize: '22px', color: C.green,
+    });
+    btn.setX(width / 2 - btn.width / 2);
+    btn.setInteractive({ useHandCursor: true });
+    btn.on('pointerdown', () => {
+      this.cameras.main.flash(50, 255, 0, 0);
+      this.time.delayedCall(100, () => {
+        this.scene.start('TodoScene', {
+          taskDescription: this.taskDescription,
+          steps: [this.step1, this.step2, this.step3],
+          doneStandard: this.doneStandard,
+        });
+      });
+    });
+  }
+
+  // ─── Hint helpers ──────────────────────────────────────────────────────────
+
+  _showHint() {
+    this.hintText.setY(this.chatText.y + this.chatText.height + 20);
+    this.hintText.setAlpha(0);
+    this.tweens.add({
+      targets: this.hintText,
+      alpha: 1,
+      duration: 900,
+      ease: 'Power2',
+      onComplete: () => {
+        this.tweens.add({
+          targets: this.hintText,
+          alpha: 0.35,
+          duration: 1800,
+          ease: 'Sine.easeInOut',
+          yoyo: true,
+          loop: -1,
+        });
+      },
+    });
+  }
+
+  // ─── Chat helpers ──────────────────────────────────────────────────────────
 
   _startWaitingDots() {
     const frames = ['[  .  ]', '[ ..  ]', '[ ... ]'];
     let i = 0;
     this._appendChat(frames[0], C.dim);
     this._dotsEvent = this.time.addEvent({
-      delay: 350,
-      loop: true,
+      delay: 350, loop: true,
       callback: () => {
         i = (i + 1) % frames.length;
         this.chatLines[this.chatLines.length - 1].line = frames[i];
@@ -254,10 +296,7 @@ export default class InterrogationScene extends BaseScene {
   }
 
   _stopWaitingDots() {
-    if (this._dotsEvent) {
-      this._dotsEvent.destroy();
-      this._dotsEvent = null;
-    }
+    if (this._dotsEvent) { this._dotsEvent.destroy(); this._dotsEvent = null; }
     this._removeLastLine();
   }
 
@@ -272,8 +311,7 @@ export default class InterrogationScene extends BaseScene {
   }
 
   _renderChat() {
-    const visible = this.chatLines.slice(-28);
-    this.chatText.setText(visible.map(l => l.line).join('\n'));
+    this.chatText.setText(this.chatLines.slice(-24).map(l => l.line).join('\n'));
   }
 
   _typewrite(text, onDone) {
@@ -289,13 +327,5 @@ export default class InterrogationScene extends BaseScene {
         if (i === text.length && onDone) onDone();
       },
     });
-  }
-
-  // ─── Timer ─────────────────────────────────────────────────────────────────
-
-  _startTimer() {
-    if (this.timerRunning) return;
-    this.timerRunning = true;
-    this.scene.start('TodoScene', { tasks: this.tasks });
   }
 }
