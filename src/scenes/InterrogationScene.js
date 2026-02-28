@@ -51,6 +51,7 @@ export default class InterrogationScene extends BaseScene {
     this.mistral = new MistralAPI();
 
     this._typewrite('OVERLORD: Good citizen, what is your contribution today, an excuse to stay alive?', () => {
+      this.hintText.setText('  (What is your next task? Give a short description for it.)');
       this._showHint();
       this.inputDisabled = false;
     });
@@ -80,13 +81,13 @@ export default class InterrogationScene extends BaseScene {
       lineSpacing: 8,
     });
 
-    this.hintText = this.add.text(PX + 10, PY + 110, '(What is your next task? Give a short description for it.)', {
+    this.hintText = this.add.text(PX + 10, PY + 110, '', {
       fontFamily: 'monospace',
       fontSize: '20px',
       color: C.dim,
       wordWrap: { width: PW - 20 },
       lineSpacing: 8,
-    }).setAlpha(0);
+    });
   }
 
   _border(x, y, w, h) {
@@ -168,8 +169,8 @@ export default class InterrogationScene extends BaseScene {
     if (this.step === 4) this.step3 = text;
     if (this.step === 5) this.doneStandard = text;
 
-    this.tweens.killTweensOf(this.hintText);
-    this.hintText.setAlpha(0);
+    if (this._hintEvent) { this._hintEvent.destroy(); this._hintEvent = null; }
+    this.hintText.setText('');
 
     this.chatLines = [];
     this._appendChat(`> ${text}`, C.dim);
@@ -199,17 +200,18 @@ export default class InterrogationScene extends BaseScene {
       if (this.step === 5) {
         this.time.delayedCall(1500, () => this._showStartButton());
       } else {
+        this._appendCollectedSteps();
         if (this.step === 1) {
-          this.hintText.setText('(Split the task in three small parts. What is task 1?)');
+          this.hintText.setText('  (Split the task in three small parts. What is task 1?)');
           this._showHint();
         } else if (this.step === 2) {
-          this.hintText.setText('(Split the task in three small parts. What is task 2?)');
+          this.hintText.setText('  (Split the task in three small parts. What is task 2?)');
           this._showHint();
         } else if (this.step === 3) {
-          this.hintText.setText('(Split the task in three small parts. What is task 3?)');
+          this.hintText.setText('  (Split the task in three small parts. What is task 3?)');
           this._showHint();
         } else if (this.step === 4) {
-          this.hintText.setText('(What does good enough look like? When is this task done?)');
+          this.hintText.setText('  (What does good enough look like? When is this task done?)');
           this._showHint();
         }
         this.inputDisabled = false;
@@ -256,26 +258,31 @@ export default class InterrogationScene extends BaseScene {
     });
   }
 
+  // ─── Collected steps display ───────────────────────────────────────────────
+
+  _appendCollectedSteps() {
+    const entries = [];
+    if (this.step >= 2 && this.step1) entries.push(this.step1);
+    if (this.step >= 3 && this.step2) entries.push(this.step2);
+    if (this.step >= 4 && this.step3) entries.push(this.step3);
+
+    this._appendChat('', C.dim);
+    if (this.taskDescription) this._appendChat(`  TASK: ${this.taskDescription}`, C.dim);
+    entries.forEach((s, i) => this._appendChat(`  ${i + 1}. ${s}`, C.dim));
+  }
+
   // ─── Hint helpers ──────────────────────────────────────────────────────────
 
   _showHint() {
+    if (this._hintEvent) { this._hintEvent.destroy(); this._hintEvent = null; }
     this.hintText.setY(this.chatText.y + this.chatText.height + 20);
-    this.hintText.setAlpha(0);
-    this.tweens.add({
-      targets: this.hintText,
-      alpha: 1,
-      duration: 900,
-      ease: 'Power2',
-      onComplete: () => {
-        this.tweens.add({
-          targets: this.hintText,
-          alpha: 0.35,
-          duration: 1800,
-          ease: 'Sine.easeInOut',
-          yoyo: true,
-          loop: -1,
-        });
-      },
+    const full = this.hintText.text;
+    this.hintText.setText('');
+    let i = 0;
+    this._hintEvent = this.time.addEvent({
+      delay: TYPEWRITER_MS,
+      repeat: full.length - 1,
+      callback: () => { this.hintText.setText(full.slice(0, ++i)); },
     });
   }
 
