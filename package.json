@@ -1,0 +1,27 @@
+{
+  "name": "productivity-bunker",
+  "version": "1.0.0",
+  "description": "In Productivity Bunker, you’re the chosen leader of the last human shelter, answerable to an AI Overlord who treats your people as resources. Your mission: Complete real-world tasks (like ‘debug for 60 minutes’) to earn supplies and upgrade your bunker. Succeed, and your civilization survives. Fail, and your people perish—oxygen leaks, walls crumble, and the Overlord repurposes the weak. The twist? The Overlord’s cruelty is undercut by dark humor: (‘Your crew’s morale is lower than your code coverage.’). It’s a productivity game with consequences, where your real-world work directly impacts your in-game society’s survival. Built with Phaser 3 and Mistral AI, it’s Habitica meets The Hunger Games—but your to-do list is the battlefield.",
+  "main": "index.js",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/nosferatu-concorde/productivity-bunker.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "bugs": {
+    "url": "https://github.com/nosferatu-concorde/productivity-bunker/issues"
+  },
+  "homepage": "https://github.com/nosferatu-concorde/productivity-bunker#readme",
+  "devDependencies": {
+    "phaser": "^3.90.0",
+    "vite": "^7.3.1"
+  }
+}
