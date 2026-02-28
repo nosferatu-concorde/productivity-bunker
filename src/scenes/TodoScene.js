@@ -2,8 +2,11 @@ import BaseScene from './BaseScene.js';
 
 const C = {
   bg: 0xffffff,
+  timerBg: 0x222222,
   border: 0x333333,
   text: '#222222',
+  timerText: '#ffffff',
+  timerDim: '#888888',
   dim: '#999999',
   done: '#aaaaaa',
 };
@@ -48,10 +51,9 @@ export default class TodoScene extends BaseScene {
     // White background
     this.add.rectangle(0, 0, width, height, C.bg).setOrigin(0, 0);
 
-    // Top half border
-    this.add.rectangle(PAD, PAD, width - PAD * 2, SPLIT_Y - PAD * 2, C.bg)
-      .setOrigin(0, 0)
-      .setStrokeStyle(1, C.border);
+    // Top half — dark background
+    this.add.rectangle(PAD, PAD, width - PAD * 2, SPLIT_Y - PAD * 2, C.timerBg)
+      .setOrigin(0, 0);
 
     // Bottom half border
     this.add.rectangle(PAD, SPLIT_Y + 4, width - PAD * 2, height - SPLIT_Y - PAD - 4, C.bg)
@@ -60,7 +62,7 @@ export default class TodoScene extends BaseScene {
 
     // Panel labels
     this.add.text(PAD + 8, PAD + 6, '[ TIMER ]', {
-      fontFamily: 'monospace', fontSize: '13px', color: C.dim,
+      fontFamily: 'monospace', fontSize: '13px', color: C.timerText,
     });
 
     this.add.text(PAD + 8, SPLIT_Y + 10, '[ MISSION STEPS ]', {
@@ -70,7 +72,7 @@ export default class TodoScene extends BaseScene {
     // Task description — small, top-right of timer panel
     if (this.taskDescription) {
       this.add.text(width - PAD - 8, PAD + 6, this.taskDescription, {
-        fontFamily: 'monospace', fontSize: '12px', color: C.dim,
+        fontFamily: 'monospace', fontSize: '12px', color: C.timerText,
         wordWrap: { width: 360 },
       }).setOrigin(1, 0);
     }
@@ -78,7 +80,7 @@ export default class TodoScene extends BaseScene {
     // Big centered timer — vertically centered in top half
     const timerY = PAD + (SPLIT_Y - PAD * 2) / 2 + 8;
     this.bigTimer = this.add.text(width / 2, timerY, '25:00', {
-      fontFamily: 'monospace', fontSize: '120px', color: C.text,
+      fontFamily: 'monospace', fontSize: '120px', color: C.timerText,
     }).setOrigin(0.5, 0.5);
   }
 
@@ -155,11 +157,7 @@ export default class TodoScene extends BaseScene {
         this.timeLeft = remaining;
         this._renderTimer();
         if (remaining <= 0) {
-          this.scene.start('BunkerScene', {
-            taskDescription: this.taskDescription,
-            steps: this.steps,
-            doneStandard: this.doneStandard,
-          });
+          this.scene.start('InterrogationScene');
         }
       },
     });
