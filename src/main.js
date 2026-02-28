@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import InterrogationScene from './scenes/InterrogationScene.js';
 import StartScene from './scenes/StartScene.js';
 import TodoScene from './scenes/TodoScene.js';
+import ResultScene from './scenes/ResultScene.js';
 import CRTPipeline from './shaders/CRTPipeline.js';
 import GlitchPipeline from './shaders/GlitchPipeline.js';
 
@@ -16,7 +17,7 @@ const config = {
     width: 800,
     height: 600,
   },
-  scene: [StartScene, InterrogationScene, TodoScene],
+  scene: [ResultScene, StartScene, InterrogationScene, TodoScene], // DEBUG: ResultScene first
 };
 
 new Phaser.Game(config);

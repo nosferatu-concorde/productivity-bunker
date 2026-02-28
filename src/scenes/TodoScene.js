@@ -109,6 +109,10 @@ export default class TodoScene extends BaseScene {
           card.stepText.setColor(done ? C.done : C.text);
         }
       });
+
+      if (this.completed.every(c => c)) {
+        this._onAllComplete();
+      }
     });
   }
 
@@ -146,8 +150,22 @@ export default class TodoScene extends BaseScene {
 
   // ─── Timer ─────────────────────────────────────────────────────────────────
 
+  _onAllComplete() {
+    const timeUsed = Date.now() - this.startTime;
+    this.cameras.main.flash(50, 255, 255, 255);
+    this.time.delayedCall(100, () => {
+      this.scene.start('ResultScene', {
+        timeUsed,
+        taskDescription: this.taskDescription,
+        steps: this.stepList,
+        underTime: timeUsed <= TIMER_DURATION * 1000,
+      });
+    });
+  }
+
   _startTimer() {
-    this.endTime = Date.now() + TIMER_DURATION * 1000;
+    this.startTime = Date.now();
+    this.endTime = this.startTime + TIMER_DURATION * 1000;
 
     this.time.addEvent({
       delay: 500,
@@ -157,7 +175,12 @@ export default class TodoScene extends BaseScene {
         this.timeLeft = remaining;
         this._renderTimer();
         if (remaining <= 0) {
-          this.scene.start('InterrogationScene');
+          this.scene.start('ResultScene', {
+            timeUsed: TIMER_DURATION * 1000,
+            taskDescription: this.taskDescription,
+            steps: this.stepList,
+            underTime: false,
+          });
         }
       },
     });
