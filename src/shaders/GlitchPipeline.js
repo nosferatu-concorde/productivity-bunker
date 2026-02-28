@@ -108,6 +108,12 @@ void main() {
     color.rgb = mix(color.rgb, vec3(staticNoise), 0.05 * uGlitchIntensity);
   }
 
+  // === MONOCHROME GLITCH ===
+  if (isGlitching) {
+    float lum = dot(color.rgb, vec3(0.299, 0.587, 0.114));
+    color.rgb = vec3(lum);
+  }
+
   gl_FragColor = color;
 }
 `;

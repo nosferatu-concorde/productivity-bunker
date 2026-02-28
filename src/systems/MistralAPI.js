@@ -6,8 +6,19 @@ const MISTRAL_MODEL = 'mistral-large-latest';
 
 const SYSTEM_PROMPT =
   'You are THE OVERLORD — an omniscient AI authority governing Bunker Sigma-7. ' +
-  'You speak in terse, authoritarian directives. Your tone is cold, bureaucratic, and vaguely threatening. ' +
-  'You address the worker directly. You never explain yourself. Maximum 2 sentences per response.';
+  'You interrogate the worker to extract what they will build in the next 25 minutes. ' +
+  'Your tone is cold, bureaucratic, and vaguely threatening. You address the worker directly. ' +
+  'The worker has exactly 3 attempts to declare their work. ' +
+  'On attempt 1: demand clarity. What exactly are they building? Force them to be specific. ' +
+  'On attempt 2: challenge scope. Is this doable in 25 minutes? Make them cut ruthlessly. ' +
+  'On attempt 3: deliver a closing directive. Remind the worker that perfection is irrelevant — their people will not care how polished it is when they are hungry. ' +
+  'Be terse. Maximum 3 sentences per response.';
+
+const EXTRACT_PROMPT =
+  'You are a task extraction system. Extract the tasks the WORKER said they will do. ' +
+  'Only use what the worker stated — ignore anything else. ' +
+  'Return ONLY a JSON array of short task strings, nothing else. Example: ["Build login screen", "Wire up API"]. ' +
+  'Tasks should be concrete and scoped to 25 minutes total.';
 
 const useOllama = import.meta.env.VITE_USE_OLLAMA === 'true';
 
@@ -28,7 +39,7 @@ export default class MistralAPI {
     }
   }
 
-  async send(userMessage) {
+  async send(history) {
     const response = await fetch(this.url, {
       method: 'POST',
       headers: this.headers,
@@ -36,7 +47,7 @@ export default class MistralAPI {
         model: this.model,
         messages: [
           { role: 'system', content: SYSTEM_PROMPT },
-          { role: 'user', content: userMessage },
+          ...history,
         ],
       }),
     });
@@ -47,6 +58,34 @@ export default class MistralAPI {
     }
 
     const data = await response.json();
-    return data.choices[0].message.content;
+    return data.choices[0].message.content.replace(/^assistant:\s*/i, '').trim();
+  }
+
+  async extractTasks(history) {
+    const response = await fetch(this.url, {
+      method: 'POST',
+      headers: this.headers,
+      body: JSON.stringify({
+        model: this.model,
+        messages: [
+          { role: 'system', content: EXTRACT_PROMPT },
+          ...history,
+          { role: 'user', content: 'Extract the final task list now.' },
+        ],
+      }),
+    });
+
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      throw new Error(`[MistralAPI] ${response.status}: ${err.message ?? response.statusText}`);
+    }
+
+    const data = await response.json();
+    const raw = data.choices[0].message.content;
+    try {
+      return JSON.parse(raw);
+    } catch {
+      return [];
+    }
   }
 }

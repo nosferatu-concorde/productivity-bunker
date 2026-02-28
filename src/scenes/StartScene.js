@@ -1,7 +1,7 @@
 import BaseScene from './BaseScene.js';
 
 const PROMPT_FONT_SIZE = '28px';
-const PROMPT_COLOR = '#ffffff';
+const PROMPT_COLOR = '#222222';
 const PROMPT_ALPHA_MIN = 0.25;
 const PROMPT_PULSE_DURATION = 700;
 
@@ -15,8 +15,7 @@ export default class StartScene extends BaseScene {
 
     const { width, height } = this.scale;
 
-    // Black background
-    this.add.rectangle(0, 0, width, height, 0x000000, 1).setOrigin(0, 0);
+    this.add.rectangle(0, 0, width, height, 0xffffff, 1).setOrigin(0, 0);
 
     // "Press SPACE to begin" — centered, pulsing
     const prompt = this.add.text(width / 2, height / 2, 'Press SPACE to begin', {

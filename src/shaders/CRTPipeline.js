@@ -40,7 +40,7 @@ void main() {
   // After curving, some UVs will be outside 0-1 range (the corners)
   // Draw these as black (the bezel/frame of the CRT)
   if (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0) {
-    gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0);  // Black, fully opaque
+    gl_FragColor = vec4(0.102, 0.102, 0.102, 1.0);  // Dark gray #1a1a1a
     return;  // Exit early, skip the rest
   }
 
@@ -86,15 +86,9 @@ void main() {
   vignette = clamp(pow(16.0 * vignette, 0.3), 0.0, 1.0);
   color *= vignette;  // Multiply to darken edges
 
-  // === DESATURATION ===
-  // Mute the colors slightly for a more retro feel
-  // dot() with these weights converts RGB to perceived brightness (luminance)
-  // These weights (0.299, 0.587, 0.114) are standard for human eye perception
+  // === DESATURATION (full monochrome) ===
   float gray = dot(color, vec3(0.299, 0.587, 0.114));
-
-  // mix() blends between color and gray
-  // 0.3 = 30% gray, 70% original color
-  color = mix(color, vec3(gray), 0.3);
+  color = vec3(gray);
 
   // === COLOR TINT ===
   // Multiply by slightly reduced G and B for warm (yellowish) tint
@@ -103,7 +97,7 @@ void main() {
 
   // === BRIGHTNESS ===
   // Boost overall brightness to compensate for darkening effects
-  color *= 1.2;
+  color *= 0.95;
 
   // === OUTPUT ===
   gl_FragColor = vec4(color, 1.0);  // RGB color, fully opaque
