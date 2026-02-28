@@ -15,7 +15,7 @@ const PW = 780;
 const PH = 580;
 const INPUT_H = 28;
 const TYPEWRITER_MS = 18;
-const MAX_INPUT = 150;
+const MAX_INPUT = 60;
 
 const STEP_LABELS = ['', 'TASK', 'STEP 1/3', 'STEP 2/3', 'STEP 3/3', 'DONE STD'];
 
@@ -117,6 +117,10 @@ export default class InterrogationScene extends BaseScene {
       fontFamily: 'monospace', fontSize: '20px', color: C.green,
     });
 
+    this.charCount = this.add.text(ix + iw - 4, iy - 20, `0/${MAX_INPUT}`, {
+      fontFamily: 'monospace', fontSize: '14px', color: C.dim,
+    }).setOrigin(1, 0);
+
     this.time.addEvent({
       delay: 500, loop: true,
       callback: () => { this.cursor.setVisible(!this.cursor.visible); },
@@ -145,9 +149,13 @@ export default class InterrogationScene extends BaseScene {
         return;
       }
 
-      if (e.key.length === 1 && this.inputBuffer.length < MAX_INPUT) {
-        this.inputBuffer += e.key;
-        this._updateInputDisplay();
+      if (e.key.length === 1) {
+        if (this.inputBuffer.length < MAX_INPUT) {
+          this.inputBuffer += e.key;
+          this._updateInputDisplay();
+        } else {
+          this.cameras.main.shake(120, 0.004);
+        }
       }
     });
   }
@@ -155,6 +163,9 @@ export default class InterrogationScene extends BaseScene {
   _updateInputDisplay() {
     this.inputText.setText(this.inputBuffer);
     this.cursor.setX(this.inputText.x + this.inputText.width + 2);
+    const len = this.inputBuffer.length;
+    this.charCount.setText(`${len}/${MAX_INPUT}`);
+    this.charCount.setColor(len >= MAX_INPUT ? '#cc0000' : C.dim);
   }
 
   // ─── Step machine ──────────────────────────────────────────────────────────
