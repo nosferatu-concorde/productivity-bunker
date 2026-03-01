@@ -50,7 +50,7 @@ export default class InterrogationScene extends BaseScene {
 
     this.mistral = new MistralAPI();
 
-    this._typewrite('OVERLORD: Good citizen, what is your contribution today, an excuse to stay alive?', () => {
+    this._typewrite('AI OVERLORD: Greetings good citizen, what is your contribution today? Meet your quouta and prosper?', () => {
       this.hintText.setText('  (What is your next task? Give a short description for it.)');
       this._showHint();
       this.inputDisabled = false;
