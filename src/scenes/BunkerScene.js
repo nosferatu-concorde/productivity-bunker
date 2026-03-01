@@ -125,7 +125,7 @@ export default class BunkerScene extends BaseScene {
     });
 
     // ── Continue ──────────────────────────────────────────────────
-    const btn = this.add.text(width / 2, height - 36, 'continue', {
+    const btn = this.add.text(width / 2, height - 36, 'PRESS SPACE TO CONTINUE', {
       fontFamily: 'monospace', fontSize: '16px', color: C.dim,
     }).setOrigin(0.5).setInteractive({ useHandCursor: true });
 
