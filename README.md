@@ -1,5 +1,69 @@
-# mistral-worldwide-2026
+# Productivity Bunker
 
-In Productivity Bunker, you’re the chosen leader of the last human shelter, answerable to an AI Overlord who treats your people as resources. Your mission: Complete real-world tasks (like ‘debug for 60 minutes’) to earn supplies and upgrade your bunker. Succeed, and your civilization survives. Fail, and your people perish—oxygen leaks, walls crumble, and the Overlord repurposes the weak. The twist? The Overlord’s cruelty is undercut by dark humor: (‘Your crew’s morale is lower than your code coverage.’). It’s a productivity game with consequences, where your real-world work directly impacts your in-game society’s survival. Built with Phaser 3 and Mistral AI, it’s Habitica meets The Hunger Games—but your to-do list is the battlefield.
+> YEAR 2031. THE SURFACE IS GONE.
 
-Productivity Bunker teaches you to ship over polish—because in dystopia (and hackathons), ‘good enough’ keeps you alive. The AI Overlord enforces ruthless prioritization: Complete tasks on time, or watch your civilization collapse. It’s a productivity simulator for the real world.
+You command BUNKER-7 — 847 survivors, dwindling oxygen, one merciless overseer: THE OVERLORD.
+
+Complete work — earn oxygen, rations, survival. Miss the deadline — civilians die.
+
+This is not about points. It's about shipping under pressure.
+
+**Ship. Or perish.**
+
+Built with **Phaser 3** and **Mistral AI** for the Mistral Worldwide 2026 Hackathon.
+
+## Game flow
+
+1. **Intro** — lore briefing from the Overlord
+2. **Interrogation** — AI interrogates you about your task and breaks it into 3 steps
+3. **Timer** — 25 minutes on the clock, check off your steps as you go
+4. **Report** — mission results, resource impact, Overlord verdict
+5. **Bunker status** — updated oxygen, rations, and civilian count before the next mission
+
+## Requirements
+
+- Node.js 18+
+- A [Mistral AI](https://console.mistral.ai/) API key
+
+## Setup
+
+```bash
+npm install
+```
+
+Create a `.env` file in the project root:
+
+```
+VITE_MISTRAL_API_KEY=your_key_here
+```
+
+## Run
+
+```bash
+npm run dev
+```
+
+Open [http://localhost:5173](http://localhost:5173) in your browser.
+
+## Build
+
+```bash
+npm run build
+```
+
+Output goes to `dist/`. Upload the contents to itch.io or any static host.
+
+## Optional: run with local Ollama
+
+If you want to run the AI locally instead of calling the Mistral API:
+
+```
+VITE_USE_OLLAMA=true
+```
+
+Make sure [Ollama](https://ollama.com/) is running with the `mistral` model pulled:
+
+```bash
+ollama pull mistral
+ollama serve
+```
