@@ -170,18 +170,18 @@ export default class StartScene extends BaseScene {
       const prev    = postMission ? current - actual : current;
 
       const valueObj = this.add.text(cx, statsY, `${prev}${unit}`, {
-        fontFamily: 'monospace', fontSize: '28px', color: C.text,
+        fontFamily: 'monospace', fontSize: '38px', color: C.text,
       }).setOrigin(0.5, 0);
 
-      this.add.text(cx, statsY + 36, label, {
-        fontFamily: 'monospace', fontSize: '11px', color: C.dim,
+      this.add.text(cx, statsY + 50, label, {
+        fontFamily: 'monospace', fontSize: '13px', color: C.dim,
       }).setOrigin(0.5, 0);
 
       if (postMission && nominal !== 0) {
         const sign  = nominal > 0 ? '+' : '';
         const color = nominal > 0 ? C.up : C.down;
         const badge = this.add.text(cx, statsY + 2, `${sign}${nominal}${unit}`, {
-          fontFamily: 'monospace', fontSize: '13px', color,
+          fontFamily: 'monospace', fontSize: '15px', color,
         }).setOrigin(0.5, 1).setAlpha(0);
 
         this.time.delayedCall(300 + i * 180, () => {
