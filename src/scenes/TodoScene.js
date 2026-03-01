@@ -24,10 +24,12 @@ export default class TodoScene extends BaseScene {
 
   preload() {
     this.load.audio('kaching', 'assets/sounds/kaching.mp3');
+    this.load.audio('wind', 'assets/sounds/wind.mp3');
   }
 
   create() {
     super.create();
+    this._playMuffledWind();
     this._kaching = this.sound.add('kaching', { volume: 0.8 });
 
     const data = this.scene.settings.data;

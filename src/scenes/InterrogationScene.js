@@ -35,9 +35,11 @@ export default class InterrogationScene extends BaseScene {
     this.load.audio('electric_interference', 'assets/sounds/electric-interference.mp3');
     this.load.audio('message_incoming', 'assets/sounds/message-incoming.mp3');
     this.load.audio('typing_keyboard', 'assets/sounds/typing-keyboard.mp3');
+    this.load.audio('wind', 'assets/sounds/wind.mp3');
   }
 
   create() {
+    this._playMuffledWind();
     this._typeSound    = this.sound.add('electric_interference', { loop: true, volume: 1.4, rate: 0.6 });
     this._keyboardSound = this.sound.add('typing_keyboard',       { loop: true, volume: 0.5 });
 
