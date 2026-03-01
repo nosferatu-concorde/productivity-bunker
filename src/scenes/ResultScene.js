@@ -204,21 +204,25 @@ export default class ResultScene extends BaseScene {
                       const newOxy = Math.min(100, Math.max(0, prevOxy + (underTime ? 5 : -12)));
                       const newRat = Math.min(100, Math.max(0, prevRat + (underTime ? Math.round(bonusPct / 2) : -15)));
 
-                      // Civilian loss: cutting it close (≤5 min saved) = -5, timer expired = -15
-                      const FIVE_MIN = 5 * 60 * 1000;
-                      const civDrop  = !underTime ? 15 : timeSavedMs < FIVE_MIN ? 5 : 0;
-                      const newCiv   = Math.max(0, prevCiv - civDrop);
+                      // Civilians: timely = grow, close call = hold, expired = lose
+                      const FIVE_MIN  = 5 * 60 * 1000;
+                      const civChange = !underTime          ? -15
+                                      : timeSavedMs < FIVE_MIN ? 0
+                                      : Math.round(bonusPct / 10);
+                      const newCiv    = Math.max(0, prevCiv + civChange);
 
                       reg.set('missions',  (reg.get('missions') ?? 0) + 1);
                       reg.set('oxygen',    newOxy);
                       reg.set('rations',   newRat);
                       reg.set('civilians', newCiv);
 
+                      // Nominal = intended change (for badge display, even if capped)
+                      // Actual  = real change after cap (for count animation)
                       const deltas = {
-                        oxygen:    newOxy - prevOxy,
-                        rations:   newRat - prevRat,
-                        civilians: newCiv - prevCiv,
-                        missions:  1,
+                        oxygen:    { nominal: underTime ? 5 : -12,                            actual: newOxy - prevOxy },
+                        rations:   { nominal: underTime ? Math.round(bonusPct / 2) : -15,     actual: newRat - prevRat },
+                        civilians: { nominal: civChange,                                      actual: newCiv - prevCiv },
+                        missions:  { nominal: 1,                                              actual: 1 },
                       };
 
                       this.tweens.add({ targets: btn, alpha: 1, duration: 300 });

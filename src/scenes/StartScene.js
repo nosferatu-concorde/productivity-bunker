@@ -33,6 +33,10 @@ export default class StartScene extends BaseScene {
     super('StartScene');
   }
 
+  init(data) {
+    this._initData = data || {};
+  }
+
   preload() {
     this.load.image('bunker', 'assets/images/bunker.png');
     this.load.audio('wind', 'assets/sounds/wind.mp3');
@@ -51,13 +55,13 @@ export default class StartScene extends BaseScene {
     }
 
     // Detect post-mission mode (arriving from ResultScene)
-    const incoming = this.scene.settings.data || {};
+    const incoming = this._initData || {};
     const postMission = incoming.deltas !== undefined;
     const { underTime = true, bonusPct = 0, overMs = 0, deltas = {} } = incoming;
 
-    const oxygenDelta  = deltas.oxygen    ?? 0;
-    const rationsDelta = deltas.rations   ?? 0;
-    const civDelta     = deltas.civilians ?? 0;
+    const oxygenDelta  = deltas.oxygen    ?? { nominal: 0, actual: 0 };
+    const rationsDelta = deltas.rations   ?? { nominal: 0, actual: 0 };
+    const civDelta     = deltas.civilians ?? { nominal: 0, actual: 0 };
 
     const oxygen    = this.registry.get('oxygen');
     const rations   = this.registry.get('rations');
@@ -149,14 +153,16 @@ export default class StartScene extends BaseScene {
 
     // ── Stat blocks ───────────────────────────────────────────────
     const stats = [
-      { cx: width * 0.15, current: oxygen,    delta: oxygenDelta,  unit: '%', label: 'OXYGEN'    },
-      { cx: width * 0.38, current: rations,   delta: rationsDelta, unit: '%', label: 'RATIONS'   },
-      { cx: width * 0.62, current: civilians, delta: civDelta,      unit: '',  label: 'CIVILIANS' },
-      { cx: width * 0.85, current: missions,  delta: 1,            unit: '',  label: 'MISSIONS'  },
+      { cx: width * 0.15, current: oxygen,    d: oxygenDelta,  unit: '%', label: 'OXYGEN'    },
+      { cx: width * 0.38, current: rations,   d: rationsDelta, unit: '%', label: 'RATIONS'   },
+      { cx: width * 0.62, current: civilians, d: civDelta,      unit: '',  label: 'CIVILIANS' },
+      { cx: width * 0.85, current: missions,  d: deltas.missions ?? { nominal: 1, actual: 1 }, unit: '', label: 'MISSIONS' },
     ];
 
-    stats.forEach(({ cx, current, delta, unit, label }, i) => {
-      const prev = postMission ? current - delta : current;
+    stats.forEach(({ cx, current, d, unit, label }, i) => {
+      const nominal = typeof d === 'object' ? d.nominal : d;
+      const actual  = typeof d === 'object' ? d.actual  : d;
+      const prev    = postMission ? current - actual : current;
 
       const valueObj = this.add.text(cx, statsY, `${prev}${unit}`, {
         fontFamily: 'monospace', fontSize: '28px', color: C.text,
@@ -166,10 +172,10 @@ export default class StartScene extends BaseScene {
         fontFamily: 'monospace', fontSize: '11px', color: C.dim,
       }).setOrigin(0.5, 0);
 
-      if (postMission && delta !== 0) {
-        const sign  = delta > 0 ? '+' : '';
-        const color = delta > 0 ? C.up : C.down;
-        const badge = this.add.text(cx, statsY + 2, `${sign}${delta}${unit}`, {
+      if (postMission && nominal !== 0) {
+        const sign  = nominal > 0 ? '+' : '';
+        const color = nominal > 0 ? C.up : C.down;
+        const badge = this.add.text(cx, statsY + 2, `${sign}${nominal}${unit}`, {
           fontFamily: 'monospace', fontSize: '13px', color,
         }).setOrigin(0.5, 1).setAlpha(0);
 
