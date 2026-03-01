@@ -37,6 +37,8 @@ Create a `.env` file in the project root:
 VITE_MISTRAL_API_KEY=your_key_here
 ```
 
+The game uses `mistral-large-latest` for all AI interactions.
+
 ## Run
 
 ```bash
