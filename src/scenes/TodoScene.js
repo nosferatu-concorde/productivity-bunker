@@ -7,7 +7,7 @@ const C = {
   text: '#222222',
   timerText: '#ffffff',
   timerDim: '#888888',
-  dim: '#999999',
+  dim: '#555555',
   done: '#aaaaaa',
 };
 

@@ -5,7 +5,7 @@ const C = {
   bg: 0xffffff,
   border: 0x333333,
   text: '#222222',
-  dim: '#999999',
+  dim: '#555555',
   green: '#222222',
 };
 

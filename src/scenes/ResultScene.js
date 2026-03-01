@@ -1,10 +1,31 @@
 import BaseScene from './BaseScene.js';
 
+// Fits text into maxLines lines of maxCols chars, breaking at word boundaries.
+// Hard-breaks single long words. Truncates with … if content still exceeds.
+function fitText(text, maxCols, maxLines) {
+  const words = text.split(' ');
+  const lines = [];
+  let line = '';
+  for (const raw of words) {
+    const word = raw.length > maxCols ? raw.slice(0, maxCols) : raw;
+    const candidate = line ? `${line} ${word}` : word;
+    if (candidate.length > maxCols) {
+      lines.push(line);
+      if (lines.length >= maxLines) break;
+      line = word;
+    } else {
+      line = candidate;
+    }
+  }
+  if (line && lines.length < maxLines) lines.push(line);
+  return lines.join('\n');
+}
+
 const C = {
   bg: 0xffffff,
   border: 0x333333,
   text: '#222222',
-  dim: '#999999',
+  dim: '#555555',
   success: '#222222',
   fail: '#cc0000',
 };
@@ -13,6 +34,8 @@ const LIMIT_MS = 25 * 60 * 1000;
 const DIGITS   = '0123456789';
 const CYCLE_MS = 550;
 const TICK_MS  = 40;
+const ZOOM     = 1.35;
+const ZOOM_MS  = 180;
 
 const PX = 10;
 const PY = 10;
@@ -27,11 +50,11 @@ function fmtTime(ms) {
 }
 
 function randomDebugData() {
-  // Random time between 1 min and 32 min — sometimes under, sometimes over
   const timeUsed = Math.floor((1 + Math.random() * 31) * 60 * 1000);
   return {
     timeUsed,
     taskDescription: 'debug task — random data',
+    steps: ['write the login endpoint', 'hook up the database', 'test the auth flow'],
     underTime: timeUsed <= LIMIT_MS,
     _debug: true,
   };
@@ -49,7 +72,7 @@ export default class ResultScene extends BaseScene {
     const isDebug  = !incoming || incoming.timeUsed == null || incoming._debug === true;
     const data     = isDebug ? randomDebugData() : incoming;
 
-    const { timeUsed, taskDescription = '', underTime } = data;
+    const { timeUsed, taskDescription = '', steps = [], underTime } = data;
 
     const timeSavedMs = LIMIT_MS - timeUsed;
     const overMs      = underTime ? 0 : -timeSavedMs;
@@ -88,7 +111,7 @@ export default class ResultScene extends BaseScene {
     const bonusText = this.add.text(width / 2, PY + 252, 'EFFICIENCY BONUS  +0 pts', {
       fontFamily: 'monospace', fontSize: '18px',
       color: underTime ? C.text : C.fail,
-    }).setOrigin(0.5, 0).setAlpha(0);
+    }).setOrigin(0.5, 0);
 
     const sep = this.add.graphics();
     sep.lineStyle(1, 0xcccccc);
@@ -101,17 +124,17 @@ export default class ResultScene extends BaseScene {
       }).setOrigin(0.5, 0);
     }
 
-    // ── New mission button ────────────────────────────────────────
+    // NEW MISSION button — hidden, appears after full sequence
     const btn = this.add.text(width / 2, PY + PH - 52, '[ NEW MISSION ]', {
       fontFamily: 'monospace', fontSize: '20px', color: C.text,
-    }).setOrigin(0.5, 0);
+    }).setOrigin(0.5, 0).setAlpha(0);
     btn.setInteractive({ useHandCursor: true });
     btn.on('pointerdown', () => {
       this.cameras.main.flash(50, 255, 0, 0);
       this.time.delayedCall(100, () => this.scene.start('InterrogationScene'));
     });
 
-    // ── Debug replay button (scene-level pointer — bypasses PostFX hit issues) ──
+    // Debug replay button
     let replayBounds = null;
     if (isDebug) {
       const replay = this.add.text(PX + PW - 10, PY + PH - 52, '[ replay ]', {
@@ -141,10 +164,7 @@ export default class ResultScene extends BaseScene {
       });
     }
 
-    // ── Slot animations: left first, then right, then bonus ───────
-    const ZOOM    = 1.18;
-    const ZOOM_MS = 180;
-
+    // ── Animation sequence ────────────────────────────────────────
     const zoomIn  = (t) => this.tweens.add({ targets: t, scale: ZOOM, duration: ZOOM_MS, ease: 'Sine.easeOut' });
     const zoomOut = (t) => this.tweens.add({ targets: t, scale: 1,    duration: ZOOM_MS, ease: 'Sine.easeOut' });
 
@@ -156,12 +176,93 @@ export default class ResultScene extends BaseScene {
         onComplete: () => {
           this._slotReveal(savedVal, savedStr, () => {
             zoomOut(savedVal);
-            this._animateBonus(bonusText, bonusPct, underTime);
+            this._animateBonus(bonusText, bonusPct, underTime, () => {
+              this.tweens.add({
+                targets: bonusText, scale: ZOOM, duration: ZOOM_MS, ease: 'Sine.easeOut',
+                onComplete: () => {
+                  zoomOut(bonusText);
+                  this.time.delayedCall(ZOOM_MS + 200, () => {
+                    this._showTickets(steps, () => {
+                      this.tweens.add({ targets: btn, alpha: 1, duration: 300 });
+                    });
+                  });
+                },
+              });
+            });
           });
         },
       });
     });
   }
+
+  // ── Ticket sequence ───────────────────────────────────────────────────────
+
+  _showTickets(steps, onAllDone) {
+    const TW      = 238;
+    const TH      = 110;
+    const GAP     = 12;
+    const totalW  = TW * 3 + GAP * 2;
+    const startX  = PX + (PW - totalW) / 2;
+    const ticketY = PY + 348;
+
+    const checkNext = (i) => {
+      if (i >= steps.length) {
+        this.time.delayedCall(400, onAllDone);
+        return;
+      }
+
+      const step = steps[i] || '';
+      const x    = startX + i * (TW + GAP);
+
+      const { box, checkbox, label } = this._createTicket(x, ticketY, TW, TH, i + 1, step);
+
+      const all = [box, checkbox, label];
+      all.forEach(o => o.setAlpha(0));
+      this.tweens.add({ targets: all, alpha: 1, duration: 200 });
+
+      this.time.delayedCall(700, () => {
+        checkbox.setText('[x]');
+        checkbox.setColor(C.text);
+        label.setColor(C.text);
+        box.setStrokeStyle(1, 0x222222);
+        this.cameras.main.shake(70, 0.003);
+        this.tweens.add({
+          targets: all, scale: 1.04, duration: 80,
+          yoyo: true, ease: 'Sine.easeOut',
+        });
+        this.time.delayedCall(450, () => checkNext(i + 1));
+      });
+    };
+
+    checkNext(0);
+  }
+
+  _createTicket(x, y, w, h, index, step) {
+    const pad      = 14;
+    const fontSize = 13;
+    const colWidth = 8;                          // px per char at 13px monospace
+    const maxCols  = Math.floor((w - pad * 2 - 34) / colWidth);
+    const fitted   = fitText(step, maxCols, 2);
+
+    const box = this.add.rectangle(x + w / 2, y + h / 2, w, h, C.bg)
+      .setStrokeStyle(1, 0x999999);
+
+    this.add.text(x + pad, y + 10, `STEP 0${index}`, {
+      fontFamily: 'monospace', fontSize: '12px', color: C.dim,
+    });
+
+    const checkbox = this.add.text(x + pad, y + 32, '[ ]', {
+      fontFamily: 'monospace', fontSize: '18px', color: C.dim,
+    });
+
+    const label = this.add.text(x + pad + 34, y + 33, fitted, {
+      fontFamily: 'monospace', fontSize: `${fontSize}px`, color: C.dim,
+    });
+
+    return { box, checkbox, label };
+  }
+
+  // ── Slot machine reveal ───────────────────────────────────────────────────
 
   _slotReveal(textObj, finalStr, onDone) {
     const chars  = finalStr.split('');
@@ -208,10 +309,12 @@ export default class ResultScene extends BaseScene {
     next();
   }
 
-  _animateBonus(text, targetPct, underTime) {
-    text.setAlpha(1);
+  // ── Bonus counter ─────────────────────────────────────────────────────────
+
+  _animateBonus(text, targetPct, underTime, onDone) {
     if (!underTime || targetPct === 0) {
       text.setText('EFFICIENCY BONUS  +0 pts');
+      onDone?.();
       return;
     }
     let elapsed = 0;
@@ -226,10 +329,13 @@ export default class ResultScene extends BaseScene {
         if (elapsed >= duration) {
           ev.destroy();
           text.setText(`EFFICIENCY BONUS  +${targetPct} pts`);
+          onDone?.();
         }
       },
     });
   }
+
+  // ── Stat block ────────────────────────────────────────────────────────────
 
   _statBlock(cx, y, value, label, valueColor = C.text) {
     const val = this.add.text(cx, y, value, {
