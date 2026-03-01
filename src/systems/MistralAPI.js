@@ -81,7 +81,7 @@ export default class MistralAPI {
       body: JSON.stringify({
         model: this.model,
         temperature: 0.75,
-        max_tokens: 90,
+        max_tokens: 60,
         messages: [
           { role: 'system', content: SYSTEM_PROMPT },
           ...conversationHistory,

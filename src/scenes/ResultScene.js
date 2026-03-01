@@ -136,7 +136,7 @@ export default class ResultScene extends BaseScene {
     }
 
     // NEW MISSION button — hidden, appears after full sequence
-    const btn = this.add.text(width / 2, PY + PH - 52, '[ NEW MISSION ]', {
+    const btn = this.add.text(width / 2, PY + PH - 52, '[ Press SPACE ]', {
       fontFamily: 'monospace', fontSize: '20px', color: C.text,
     }).setOrigin(0.5, 0).setAlpha(0);
     btn.setInteractive({ useHandCursor: true });
@@ -203,14 +203,17 @@ export default class ResultScene extends BaseScene {
 
                       const newOxy = Math.min(100, Math.max(0, prevOxy + (underTime ? 5 : -12)));
                       const newRat = Math.min(100, Math.max(0, prevRat + (underTime ? Math.round(bonusPct / 2) : -15)));
-                      const newCiv = Math.max(0, prevCiv - (underTime ? 0 : Math.round(overMs / 60000) * 3));
+
+                      // Civilian loss: cutting it close (≤5 min saved) = -5, timer expired = -15
+                      const FIVE_MIN = 5 * 60 * 1000;
+                      const civDrop  = !underTime ? 15 : timeSavedMs < FIVE_MIN ? 5 : 0;
+                      const newCiv   = Math.max(0, prevCiv - civDrop);
 
                       reg.set('missions',  (reg.get('missions') ?? 0) + 1);
                       reg.set('oxygen',    newOxy);
                       reg.set('rations',   newRat);
                       reg.set('civilians', newCiv);
 
-                      // Pass actual deltas so StartScene shows what really changed
                       const deltas = {
                         oxygen:    newOxy - prevOxy,
                         rations:   newRat - prevRat,
@@ -219,11 +222,18 @@ export default class ResultScene extends BaseScene {
                       };
 
                       this.tweens.add({ targets: btn, alpha: 1, duration: 300 });
-                      btn.off('pointerdown');
-                      btn.on('pointerdown', () => {
+
+                      const advance = () => {
                         this.cameras.main.flash(50, 255, 0, 0);
-                        this.time.delayedCall(100, () => this.scene.start('StartScene', { underTime, bonusPct, overMs, deltas }));
-                      });
+                        const next = newOxy <= 0
+                          ? ['GameOverScene', { missions: reg.get('missions'), civilians: newCiv }]
+                          : ['StartScene',    { underTime, bonusPct, overMs, deltas }];
+                        this.time.delayedCall(100, () => this.scene.start(...next));
+                      };
+
+                      btn.off('pointerdown');
+                      btn.on('pointerdown', advance);
+                      this.input.keyboard.once('keydown-SPACE', advance);
                     });
                   });
                 });

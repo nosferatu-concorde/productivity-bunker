@@ -54,7 +54,7 @@ export default class IntroScene extends BaseScene {
     }).setOrigin(0, 0);
 
     // Skip / continue prompt — hidden until done
-    const prompt = this.add.text(width / 2, height - 32, 'continue', {
+    const prompt = this.add.text(width / 2, height - 32, 'PRESS SPACE TO CONTINUE', {
       fontFamily: 'monospace', fontSize: '13px', color: '#ffffff',
     }).setOrigin(0.5).setAlpha(0);
 
