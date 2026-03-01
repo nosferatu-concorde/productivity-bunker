@@ -50,6 +50,30 @@ export default class MistralAPI {
     }
   }
 
+  async sendOnce(systemPrompt, userPrompt) {
+    const response = await fetch(this.url, {
+      method: 'POST',
+      headers: this.headers,
+      body: JSON.stringify({
+        model: this.model,
+        temperature: 0.85,
+        max_tokens: 60,
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user',   content: userPrompt },
+        ],
+      }),
+    });
+
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      throw new Error(`[MistralAPI] ${response.status}: ${err.message ?? response.statusText}`);
+    }
+
+    const data = await response.json();
+    return data.choices[0].message.content.replace(/^assistant:\s*/i, '').trim();
+  }
+
   async sendStep(stepPrompt, conversationHistory) {
     const response = await fetch(this.url, {
       method: 'POST',

@@ -1,6 +1,8 @@
 import Phaser from 'phaser';
+import IntroScene from './scenes/IntroScene.js';
 import InterrogationScene from './scenes/InterrogationScene.js';
 import StartScene from './scenes/StartScene.js';
+import BunkerScene from './scenes/BunkerScene.js';
 import TodoScene from './scenes/TodoScene.js';
 import ResultScene from './scenes/ResultScene.js';
 import AudioScene from './scenes/AudioScene.js';
@@ -18,7 +20,7 @@ const config = {
     width: 800,
     height: 600,
   },
-  scene: [StartScene, InterrogationScene, TodoScene, ResultScene, AudioScene],
+  scene: [IntroScene, StartScene, InterrogationScene, TodoScene, ResultScene, BunkerScene, AudioScene],
 };
 
 new Phaser.Game(config);

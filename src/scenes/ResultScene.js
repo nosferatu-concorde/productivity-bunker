@@ -66,7 +66,6 @@ export default class ResultScene extends BaseScene {
   }
 
   preload() {
-    this.load.audio('rising', 'assets/sounds/rising.mp3');
     this.load.audio('ding', 'assets/sounds/ding.mp3');
     this.load.audio('kaching', 'assets/sounds/kaching.mp3');
     this.load.audio('gunshot', 'assets/sounds/gunshot.mp3');
@@ -74,7 +73,6 @@ export default class ResultScene extends BaseScene {
 
   create() {
     super.create();
-    this._rising  = this.sound.add('rising',  { volume: 0.7 });
     this._ding    = this.sound.add('ding',    { loop: true, volume: 1.4, rate: 1.5 });
     this._kaching = this.sound.add('kaching', { volume: 0.8 });
     this._gunshot = this.sound.add('gunshot', { volume: 0.8 });
@@ -142,7 +140,7 @@ export default class ResultScene extends BaseScene {
     btn.setInteractive({ useHandCursor: true });
     btn.on('pointerdown', () => {
       this.cameras.main.flash(50, 255, 0, 0);
-      this.time.delayedCall(100, () => this.scene.start('InterrogationScene'));
+      this.time.delayedCall(100, () => this.scene.start('BunkerScene', { underTime, bonusPct, overMs }));
     });
 
     // Debug replay button
@@ -199,6 +197,14 @@ export default class ResultScene extends BaseScene {
                   zoomOut(bonusText);
                   this.time.delayedCall(ZOOM_MS + 200, () => {
                     this._showTickets(steps, () => {
+                      // Write session stats to registry
+                      const reg = this.registry;
+                      reg.set('missions',  (reg.get('missions')  || 0) + 1);
+                      reg.set('oxygen',    Math.min(100, Math.max(0, (reg.get('oxygen')   || 100) + (underTime ? 5 : -12))));
+                      reg.set('rations',   Math.min(100, Math.max(0, (reg.get('rations')  || 100) + (underTime ? Math.round(bonusPct / 2) : -15))));
+                      const civDrop = underTime ? 0 : Math.round(overMs / 60000) * 3;
+                      reg.set('civilians', Math.max(0, (reg.get('civilians') || 847) - civDrop));
+
                       this.tweens.add({ targets: btn, alpha: 1, duration: 300 });
                     });
                   });
