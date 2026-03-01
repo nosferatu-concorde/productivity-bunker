@@ -31,7 +31,27 @@ export default class InterrogationScene extends BaseScene {
     super('InterrogationScene');
   }
 
+  preload() {
+    this.load.audio('electric_interference', 'assets/sounds/electric-interference.mp3');
+    this.load.audio('message_incoming', 'assets/sounds/message-incoming.mp3');
+    this.load.audio('typing_keyboard', 'assets/sounds/typing-keyboard.mp3');
+  }
+
   create() {
+    this._typeSound    = this.sound.add('electric_interference', { loop: true, volume: 1.4, rate: 0.6 });
+    this._keyboardSound = this.sound.add('typing_keyboard',       { loop: true, volume: 0.5 });
+
+    this._incomingSound = this.sound.add('message_incoming', { volume: 0.12 });
+    if (this._incomingSound.gainNode && this.sound.context) {
+      const ctx    = this.sound.context;
+      const filter = ctx.createBiquadFilter();
+      filter.type            = 'lowpass';
+      filter.frequency.value = 80;
+      filter.Q.value         = 0.3;
+      this._incomingSound.gainNode.disconnect();
+      this._incomingSound.gainNode.connect(filter);
+      filter.connect(this.sound.masterVolumeNode);
+    }
     super.create();
 
     this.step = 0;
@@ -89,6 +109,10 @@ export default class InterrogationScene extends BaseScene {
       wordWrap: { width: PW - 20 },
       lineSpacing: 8,
     });
+
+    this.dotsText = this.add.text(width / 2, height / 2, '', {
+      fontFamily: 'monospace', fontSize: '24px', color: C.dim,
+    }).setOrigin(0.5);
   }
 
   _border(x, y, w, h) {
@@ -204,31 +228,36 @@ export default class InterrogationScene extends BaseScene {
   }
 
   _onResponse(userPrompt, message) {
-    this._stopWaitingDots();
+    const elapsed   = Date.now() - this._dotsStartedAt;
+    const remaining = Math.max(0, 2000 - elapsed);
     this.conversationHistory.push({ role: 'user', content: userPrompt });
     this.conversationHistory.push({ role: 'assistant', content: message });
-    this.chatLines = [];
-
-    this._typewrite(`OVERLORD: ${message}`, () => {
-      if (this.step === 5) {
-        this.time.delayedCall(1500, () => this._showStartButton());
-      } else {
-        this._appendCollectedSteps();
-        if (this.step === 1) {
-          this.hintText.setText('  (Split the task in three small parts. What is task 1?)');
-          this._showHint();
-        } else if (this.step === 2) {
-          this.hintText.setText('  (Split the task in three small parts. What is task 2?)');
-          this._showHint();
-        } else if (this.step === 3) {
-          this.hintText.setText('  (Split the task in three small parts. What is task 3?)');
-          this._showHint();
-        } else if (this.step === 4) {
-          this.hintText.setText('  (What does good enough look like? When is this task done?)');
-          this._showHint();
+    this.time.delayedCall(remaining, () => {
+      this._clearDots();
+      this.chatLines = [];
+      this._typewrite(`OVERLORD: ${message}`, () => {
+        if (this.step === 5) {
+          this._typeSound.stop();
+          this._keyboardSound.stop();
+          this.time.delayedCall(1500, () => this._showStartButton());
+        } else {
+          this._appendCollectedSteps();
+          if (this.step === 1) {
+            this.hintText.setText('  (Split the task in three small parts. What is task 1?)');
+            this._showHint();
+          } else if (this.step === 2) {
+            this.hintText.setText('  (Split the task in three small parts. What is task 2?)');
+            this._showHint();
+          } else if (this.step === 3) {
+            this.hintText.setText('  (Split the task in three small parts. What is task 3?)');
+            this._showHint();
+          } else if (this.step === 4) {
+            this.hintText.setText('  (What does good enough look like? When is this task done?)');
+            this._showHint();
+          }
+          this.inputDisabled = false;
         }
-        this.inputDisabled = false;
-      }
+      });
     });
   }
 
@@ -295,27 +324,43 @@ export default class InterrogationScene extends BaseScene {
     this._hintEvent = this.time.addEvent({
       delay: TYPEWRITER_MS,
       repeat: full.length - 1,
-      callback: () => { this.hintText.setText(full.slice(0, ++i)); },
+      callback: () => {
+        this.hintText.setText(full.slice(0, ++i));
+        if (i === full.length) { this._typeSound.stop(); this._keyboardSound.stop(); }
+      },
     });
   }
 
   // ─── Chat helpers ──────────────────────────────────────────────────────────
 
   _startWaitingDots() {
-    const frames = ['[  .  ]', '[ ..  ]', '[ ... ]'];
+    const frames = ['.', '..', '...', '....'];
     let i = 0;
+    this._dotsStartedAt = Date.now();
     this._appendChat(frames[0], C.dim);
+    this._incomingSound.play();
     this._dotsEvent = this.time.addEvent({
       delay: 350, loop: true,
       callback: () => {
         i = (i + 1) % frames.length;
         this.chatLines[this.chatLines.length - 1].line = frames[i];
         this._renderChat();
+        this._incomingSound.play();
       },
     });
   }
 
   _stopWaitingDots() {
+    const elapsed = Date.now() - this._dotsStartedAt;
+    const remaining = Math.max(0, 1000 - elapsed);
+    if (remaining > 0) {
+      this._pendingStop = this.time.delayedCall(remaining, () => this._clearDots());
+    } else {
+      this._clearDots();
+    }
+  }
+
+  _clearDots() {
     if (this._dotsEvent) { this._dotsEvent.destroy(); this._dotsEvent = null; }
     this._removeLastLine();
   }
@@ -338,6 +383,8 @@ export default class InterrogationScene extends BaseScene {
     this._appendChat('');
     let i = 0;
     const idx = this.chatLines.length - 1;
+    if (!this._typeSound.isPlaying)    this._typeSound.play();
+    if (!this._keyboardSound.isPlaying) this._keyboardSound.play();
     this.time.addEvent({
       delay: TYPEWRITER_MS,
       repeat: text.length - 1,
