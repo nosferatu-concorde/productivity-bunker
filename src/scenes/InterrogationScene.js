@@ -19,11 +19,12 @@ const MAX_INPUT = 60;
 
 const STEP_LABELS = ['', 'TASK', 'STEP 1/3', 'STEP 2/3', 'STEP 3/3', 'DONE STD'];
 
-// Steps that skip the API and use hardcoded Overlord lines
 const HARDCODED = {
   step2: 'Logged. Step 2 — what is it, citizen?',
   step3: 'Logged. Step 3 — the final action. Make it count.',
 };
+
+const FLAVOR_PROMPT = 'You are the AI Overlord of the last human bunker. Add one short cold Orwellian remark — pick from themes like: oxygen ration levels, sector productivity scores, civilian morale index, bunker structural integrity, the surface being uninhabitable, quota compliance. Do not ask a question. Do not reference any specific task. 1 sentence only.';
 
 export default class InterrogationScene extends BaseScene {
   constructor() {
@@ -50,7 +51,7 @@ export default class InterrogationScene extends BaseScene {
 
     this.mistral = new MistralAPI();
 
-    this._typewrite('OVERLORD: Good citizen, what is your contribution today, an excuse to stay alive?', () => {
+    this._typewrite('AI OVERLORD: Greetings good citizen, what is your contribution today? Meet your quouta and prosper?', () => {
       this.hintText.setText('  (What is your next task? Give a short description for it.)');
       this._showHint();
       this.inputDisabled = false;
@@ -192,8 +193,9 @@ export default class InterrogationScene extends BaseScene {
     const hardcoded = HARDCODED[`step${this.step}`];
 
     if (hardcoded) {
-      // Skip API — respond instantly, still record to history for LLM context later
-      this.time.delayedCall(400, () => this._onResponse(prompt, hardcoded));
+      this.mistral.sendStep(FLAVOR_PROMPT, this.conversationHistory)
+        .then((flavor) => this._onResponse(prompt, `${hardcoded} ${flavor}`))
+        .catch(() => this._onResponse(prompt, hardcoded));
     } else {
       this.mistral.sendStep(prompt, this.conversationHistory)
         .then((msg) => this._onResponse(prompt, msg))
@@ -234,15 +236,15 @@ export default class InterrogationScene extends BaseScene {
     const { taskDescription, step1, step2 } = this;
     switch (step) {
       case 1:
-        return `Task logged: "${playerInput}". Coldly acknowledge it in one sentence. Then ask what step 1 is. Orwellian tone, no warmth. 2 sentences.`;
+        return `Task logged: "${playerInput}". Coldly acknowledge it in one sentence — you may reference bunker survival stakes, quota systems, oxygen rations, or sector productivity scores to underline why this matters. Then ask what step 1 is. Orwellian tone, no warmth. 2 sentences.`;
       case 2:
         return `Task: "${taskDescription}". Step 1: "${playerInput}".`;
       case 3:
         return `Step 2: "${playerInput}".`;
       case 4:
-        return `Task: "${taskDescription}". Steps: "${step1}" / "${step2}" / "${playerInput}". All steps logged. Command them to close all distractions now. Ask what good enough looks like for this task. 2 sentences.`;
+        return `Task: "${taskDescription}". Steps: "${step1}" / "${step2}" / "${playerInput}". All steps logged. Command them to shut off all bunker distractions right now — pick 2 or 3 specific ones from: bunker radio, ration entertainment feed, civilian comms channel, morale screen, sector gossip terminal, personal device. Then ask what good enough looks like for this task. Orwellian tone. 2 sentences.`;
       case 5:
-        return `Task: "${taskDescription}". Steps: "${step1}" / "${step2}" / "${this.step3}". Done standard: "${playerInput}". Deliver the final sendoff. Good enough ships, perfect does not. 25 minutes. End with exactly: "DIRECTIVE ACCEPTED. TIMER INITIATED." 2 sentences.`;
+        return `Task: "${taskDescription}". Steps: "${step1}" / "${step2}" / "${this.step3}". Done standard: "${playerInput}". Deliver the final sendoff — remind them that bunker survival depends on output, not perfection. You may reference ration allocation, oxygen reserves, or sector ranking to raise the stakes. 25 minutes on the clock. End with exactly: "DIRECTIVE ACCEPTED. TIMER INITIATED." 2 sentences.`;
       default:
         return playerInput;
     }

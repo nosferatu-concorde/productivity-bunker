@@ -17,7 +17,7 @@ const config = {
     width: 800,
     height: 600,
   },
-  scene: [ResultScene, StartScene, InterrogationScene, TodoScene], // DEBUG: ResultScene first
+  scene: [StartScene, InterrogationScene, TodoScene, ResultScene],
 };
 
 new Phaser.Game(config);
