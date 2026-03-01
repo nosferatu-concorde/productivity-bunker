@@ -35,9 +35,11 @@ export default class InterrogationScene extends BaseScene {
     this.load.audio('electric_interference', 'assets/sounds/electric-interference.mp3');
     this.load.audio('message_incoming', 'assets/sounds/message-incoming.mp3');
     this.load.audio('typing_keyboard', 'assets/sounds/typing-keyboard.mp3');
+    this.load.audio('wind', 'assets/sounds/wind.mp3');
   }
 
   create() {
+    this._playMuffledWind();
     this._typeSound    = this.sound.add('electric_interference', { loop: true, volume: 1.4, rate: 0.6 });
     this._keyboardSound = this.sound.add('typing_keyboard',       { loop: true, volume: 0.5 });
 
@@ -71,7 +73,7 @@ export default class InterrogationScene extends BaseScene {
 
     this.mistral = new MistralAPI();
 
-    this._typewrite('AI OVERLORD: Greetings good citizen, what is your contribution today? Meet your quouta and prosper?', () => {
+    this._typewrite('AI OVERLORD: Greetings good citizen, what is your contribution today?', () => {
       this.hintText.setText('  (What is your next task? Give a short description for it.)');
       this._showHint();
       this.inputDisabled = false;
@@ -96,18 +98,18 @@ export default class InterrogationScene extends BaseScene {
 
     this.chatText = this.add.text(PX + 10, PY + 30, '', {
       fontFamily: 'monospace',
-      fontSize: '20px',
+      fontSize: '19px',
       color: C.text,
       wordWrap: { width: PW - 20 },
-      lineSpacing: 8,
+      lineSpacing: 6,
     });
 
     this.hintText = this.add.text(PX + 10, PY + 110, '', {
       fontFamily: 'monospace',
-      fontSize: '20px',
+      fontSize: '19px',
       color: C.dim,
       wordWrap: { width: PW - 20 },
-      lineSpacing: 8,
+      lineSpacing: 6,
     });
 
     this.dotsText = this.add.text(width / 2, height / 2, '', {
@@ -131,15 +133,15 @@ export default class InterrogationScene extends BaseScene {
       .setStrokeStyle(1, C.border);
 
     this.add.text(ix + 4, iy + 4, '>', {
-      fontFamily: 'monospace', fontSize: '20px', color: C.green,
+      fontFamily: 'monospace', fontSize: '19px', color: C.green,
     });
 
-    this.inputText = this.add.text(ix + 20, iy + 4, '', {
-      fontFamily: 'monospace', fontSize: '20px', color: C.text,
+    this.inputText = this.add.text(ix + 18, iy + 5, '', {
+      fontFamily: 'monospace', fontSize: '19px', color: C.text,
     });
 
-    this.cursor = this.add.text(ix + 20, iy + 4, '_', {
-      fontFamily: 'monospace', fontSize: '20px', color: C.green,
+    this.cursor = this.add.text(ix + 18, iy + 5, '_', {
+      fontFamily: 'monospace', fontSize: '19px', color: C.green,
     });
 
     this.charCount = this.add.text(ix + iw - 4, iy - 20, `0/${MAX_INPUT}`, {
@@ -271,7 +273,7 @@ export default class InterrogationScene extends BaseScene {
       case 3:
         return `Step 2: "${playerInput}".`;
       case 4:
-        return `Task: "${taskDescription}". Steps: "${step1}" / "${step2}" / "${playerInput}". All steps logged. Command them to shut off all bunker distractions right now — pick 2 or 3 specific ones from: bunker radio, ration entertainment feed, civilian comms channel, morale screen, sector gossip terminal, personal device. Then ask what good enough looks like for this task. Orwellian tone. 2 sentences.`;
+        return `Task: "${taskDescription}". Steps logged. Name exactly 2 distractions to kill (pick from: bunker radio, ration feed, comms channel, morale screen, gossip terminal). Then ask what good enough looks like. Max 2 short sentences.`;
       case 5:
         return `Task: "${taskDescription}". Steps: "${step1}" / "${step2}" / "${this.step3}". Done standard: "${playerInput}". Deliver the final sendoff — remind them that bunker survival depends on output, not perfection. You may reference ration allocation, oxygen reserves, or sector ranking to raise the stakes. 25 minutes on the clock. End with exactly: "DIRECTIVE ACCEPTED. TIMER INITIATED." 2 sentences.`;
       default:
@@ -283,12 +285,13 @@ export default class InterrogationScene extends BaseScene {
 
   _showStartButton() {
     const { width, height } = this.scale;
-    const btn = this.add.text(0, height / 2 + 60, '[ INITIATE WORK SEQUENCE ]', {
+    const btn = this.add.text(0, height / 2 + 60, '[ PRESS SPACE TO WORK ]', {
       fontFamily: 'monospace', fontSize: '22px', color: C.green,
     });
     btn.setX(width / 2 - btn.width / 2);
     btn.setInteractive({ useHandCursor: true });
-    btn.on('pointerdown', () => {
+
+    const advance = () => {
       this.cameras.main.flash(50, 255, 0, 0);
       this.time.delayedCall(100, () => {
         this.scene.start('TodoScene', {
@@ -297,7 +300,10 @@ export default class InterrogationScene extends BaseScene {
           doneStandard: this.doneStandard,
         });
       });
-    });
+    };
+
+    btn.on('pointerdown', advance);
+    this.input.keyboard.once('keydown-SPACE', advance);
   }
 
   // ─── Collected steps display ───────────────────────────────────────────────

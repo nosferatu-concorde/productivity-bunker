@@ -66,15 +66,15 @@ export default class ResultScene extends BaseScene {
   }
 
   preload() {
-    this.load.audio('rising', 'assets/sounds/rising.mp3');
     this.load.audio('ding', 'assets/sounds/ding.mp3');
+    this.load.audio('wind', 'assets/sounds/wind.mp3');
     this.load.audio('kaching', 'assets/sounds/kaching.mp3');
     this.load.audio('gunshot', 'assets/sounds/gunshot.mp3');
   }
 
   create() {
     super.create();
-    this._rising  = this.sound.add('rising',  { volume: 0.7 });
+    this._playMuffledWind();
     this._ding    = this.sound.add('ding',    { loop: true, volume: 1.4, rate: 1.5 });
     this._kaching = this.sound.add('kaching', { volume: 0.8 });
     this._gunshot = this.sound.add('gunshot', { volume: 0.8 });
@@ -136,14 +136,10 @@ export default class ResultScene extends BaseScene {
     }
 
     // NEW MISSION button — hidden, appears after full sequence
-    const btn = this.add.text(width / 2, PY + PH - 52, '[ NEW MISSION ]', {
+    const btn = this.add.text(width / 2, PY + PH - 52, '[ Press SPACE ]', {
       fontFamily: 'monospace', fontSize: '20px', color: C.text,
     }).setOrigin(0.5, 0).setAlpha(0);
     btn.setInteractive({ useHandCursor: true });
-    btn.on('pointerdown', () => {
-      this.cameras.main.flash(50, 255, 0, 0);
-      this.time.delayedCall(100, () => this.scene.start('InterrogationScene'));
-    });
 
     // Debug replay button
     let replayBounds = null;
@@ -193,13 +189,57 @@ export default class ResultScene extends BaseScene {
             this.tweens.add({
               targets: bonusText, scale: 1.8, duration: ZOOM_MS, ease: 'Sine.easeOut',
               onComplete: () => {
-                this._ding.stop();
                 this._animateBonus(bonusText, bonusPct, underTime, () => {
+                  this._ding.stop();
                   this._kaching.play();
-                  zoomOut(bonusText);
-                  this.time.delayedCall(ZOOM_MS + 200, () => {
+                  this.time.delayedCall(300, () => {
+                    zoomOut(bonusText);
+                  });
+                  this.time.delayedCall(300 + ZOOM_MS + 200, () => {
                     this._showTickets(steps, () => {
+                      // Write session stats to registry, track actual applied deltas
+                      const reg = this.registry;
+                      const prevOxy = reg.get('oxygen')    ?? 100;
+                      const prevRat = reg.get('rations')   ?? 100;
+                      const prevCiv = reg.get('civilians') ?? 847;
+
+                      const newOxy = Math.min(100, Math.max(0, prevOxy + (underTime ? 5 : -12)));
+                      const newRat = Math.min(100, Math.max(0, prevRat + (underTime ? Math.round(bonusPct / 2) : -15)));
+
+                      // Civilians: timely = grow, close call = hold, expired = lose
+                      const FIVE_MIN  = 5 * 60 * 1000;
+                      const civChange = !underTime          ? -15
+                                      : timeSavedMs < FIVE_MIN ? 0
+                                      : Math.round(bonusPct / 10);
+                      const newCiv    = Math.max(0, prevCiv + civChange);
+
+                      reg.set('missions',  (reg.get('missions') ?? 0) + 1);
+                      reg.set('oxygen',    newOxy);
+                      reg.set('rations',   newRat);
+                      reg.set('civilians', newCiv);
+
+                      // Nominal = intended change (for badge display, even if capped)
+                      // Actual  = real change after cap (for count animation)
+                      const deltas = {
+                        oxygen:    { nominal: underTime ? 5 : -12,                            actual: newOxy - prevOxy },
+                        rations:   { nominal: underTime ? Math.round(bonusPct / 2) : -15,     actual: newRat - prevRat },
+                        civilians: { nominal: civChange,                                      actual: newCiv - prevCiv },
+                        missions:  { nominal: 1,                                              actual: 1 },
+                      };
+
                       this.tweens.add({ targets: btn, alpha: 1, duration: 300 });
+
+                      const advance = () => {
+                        this.cameras.main.flash(50, 255, 0, 0);
+                        const next = newOxy <= 0
+                          ? ['GameOverScene', { missions: reg.get('missions'), civilians: newCiv }]
+                          : ['StartScene',    { underTime, bonusPct, overMs, deltas }];
+                        this.time.delayedCall(100, () => this.scene.start(...next));
+                      };
+
+                      btn.off('pointerdown');
+                      btn.on('pointerdown', advance);
+                      this.input.keyboard.once('keydown-SPACE', advance);
                     });
                   });
                 });
@@ -258,7 +298,7 @@ export default class ResultScene extends BaseScene {
       });
     };
 
-    checkNext(0);
+    this.time.delayedCall(300, () => checkNext(0));
   }
 
   _createTicket(x, y, w, h, index, step) {

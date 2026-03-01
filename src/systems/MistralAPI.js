@@ -2,7 +2,7 @@ const OLLAMA_URL = 'http://localhost:11434/v1/chat/completions';
 const OLLAMA_MODEL = 'mistral';
 
 const MISTRAL_URL = 'https://api.mistral.ai/v1/chat/completions';
-const MISTRAL_MODEL = 'mistral-small-latest';
+const MISTRAL_MODEL = 'mistral-large-latest';
 
 const SYSTEM_PROMPT = `You are the AI Overlord of the last human bunker.
 Your real purpose: ensure this worker actually completes their task effectively.
@@ -50,6 +50,30 @@ export default class MistralAPI {
     }
   }
 
+  async sendOnce(systemPrompt, userPrompt) {
+    const response = await fetch(this.url, {
+      method: 'POST',
+      headers: this.headers,
+      body: JSON.stringify({
+        model: this.model,
+        temperature: 0.85,
+        max_tokens: 60,
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user',   content: userPrompt },
+        ],
+      }),
+    });
+
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      throw new Error(`[MistralAPI] ${response.status}: ${err.message ?? response.statusText}`);
+    }
+
+    const data = await response.json();
+    return data.choices[0].message.content.replace(/^assistant:\s*/i, '').trim();
+  }
+
   async sendStep(stepPrompt, conversationHistory) {
     const response = await fetch(this.url, {
       method: 'POST',
@@ -57,7 +81,7 @@ export default class MistralAPI {
       body: JSON.stringify({
         model: this.model,
         temperature: 0.75,
-        max_tokens: 90,
+        max_tokens: 80,
         messages: [
           { role: 'system', content: SYSTEM_PROMPT },
           ...conversationHistory,
