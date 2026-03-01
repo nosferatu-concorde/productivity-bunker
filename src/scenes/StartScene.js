@@ -106,15 +106,20 @@ export default class StartScene extends BaseScene {
       const typingSound = this.sound.add('typing', { loop: true, volume: 0.4 });
 
       const quoteObj = this.add.text(imageCx, imageY + 60, '', {
-        fontFamily: 'monospace', fontSize: '15px', color: '#ffffff',
+        fontFamily: 'monospace', fontSize: '24px', color: '#ffffff',
         wordWrap: { width: PW - 100 }, align: 'center', lineSpacing: 6,
       }).setOrigin(0.5, 0).setAlpha(0.92);
 
+      const onQuoteDone = () => {
+        this.tweens.add({ targets: prompt, alpha: 1, duration: 400,
+          onComplete: startPromptPulse });
+      };
+
       this._fetchQuote(underTime, bonusPct, overMs, oxygenDelta, rationsDelta, civDelta)
-        .then(q => this._typewrite(quoteObj, `"${q.replace(/^"|"$/g, '')}"`, typingSound))
+        .then(q => this._typewrite(quoteObj, `"${q.replace(/^"|"$/g, '')}"`, typingSound, onQuoteDone))
         .catch(() => {
           const q = FALLBACK_QUOTES[Math.floor(Math.random() * FALLBACK_QUOTES.length)];
-          this._typewrite(quoteObj, q, typingSound);
+          this._typewrite(quoteObj, q, typingSound, onQuoteDone);
         });
     } else {
       this.add.text(imageCx, imageY + 22, 'PRODUCTIVITY BUNKER', {
@@ -194,16 +199,24 @@ export default class StartScene extends BaseScene {
       fontFamily: 'monospace',
       fontSize: PROMPT_FONT_SIZE,
       fill: PROMPT_COLOR,
-    }).setOrigin(0.5);
+    }).setOrigin(0.5).setAlpha(postMission ? 0 : 1);
 
-    this.tweens.add({
-      targets: prompt,
-      alpha: PROMPT_ALPHA_MIN,
-      duration: PROMPT_PULSE_DURATION,
-      yoyo: true,
-      repeat: -1,
-      ease: 'Sine.easeInOut',
-    });
+    const startPromptPulse = () => {
+      this.tweens.add({
+        targets: prompt,
+        alpha: PROMPT_ALPHA_MIN,
+        duration: PROMPT_PULSE_DURATION,
+        yoyo: true,
+        repeat: -1,
+        ease: 'Sine.easeInOut',
+      });
+    };
+
+    if (postMission) {
+      // Revealed after quote finishes — see _typewrite onDone
+    } else {
+      startPromptPulse();
+    }
 
     // Wind ambience
     const wind = this.sound.add('wind', { loop: true, volume: 0.5 });
@@ -237,7 +250,7 @@ export default class StartScene extends BaseScene {
     return api.sendOnce(OVERLORD_SYSTEM, prompt);
   }
 
-  _typewrite(textObj, fullText, sound = null) {
+  _typewrite(textObj, fullText, sound = null, onDone = null) {
     let i = 0;
     if (sound) sound.play();
     const ev = this.time.addEvent({
@@ -249,6 +262,7 @@ export default class StartScene extends BaseScene {
         if (i >= fullText.length) {
           ev.destroy();
           if (sound) sound.stop();
+          if (onDone) onDone();
         }
       },
     });

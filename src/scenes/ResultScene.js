@@ -189,11 +189,13 @@ export default class ResultScene extends BaseScene {
             this.tweens.add({
               targets: bonusText, scale: 1.8, duration: ZOOM_MS, ease: 'Sine.easeOut',
               onComplete: () => {
-                this._ding.stop();
                 this._animateBonus(bonusText, bonusPct, underTime, () => {
+                  this._ding.stop();
                   this._kaching.play();
-                  zoomOut(bonusText);
-                  this.time.delayedCall(ZOOM_MS + 200, () => {
+                  this.time.delayedCall(300, () => {
+                    zoomOut(bonusText);
+                  });
+                  this.time.delayedCall(300 + ZOOM_MS + 200, () => {
                     this._showTickets(steps, () => {
                       // Write session stats to registry, track actual applied deltas
                       const reg = this.registry;
@@ -296,7 +298,7 @@ export default class ResultScene extends BaseScene {
       });
     };
 
-    checkNext(0);
+    this.time.delayedCall(300, () => checkNext(0));
   }
 
   _createTicket(x, y, w, h, index, step) {
