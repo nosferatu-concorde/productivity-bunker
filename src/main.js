@@ -20,7 +20,7 @@ const config = {
     width: 800,
     height: 600,
   },
-  scene: [ResultScene, IntroScene, StartScene, InterrogationScene, TodoScene, GameOverScene, AudioScene],
+  scene: [IntroScene, StartScene, InterrogationScene, TodoScene, ResultScene, GameOverScene, AudioScene],
 };
 
 new Phaser.Game(config);

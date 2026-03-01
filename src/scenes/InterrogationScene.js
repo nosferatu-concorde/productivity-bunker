@@ -98,7 +98,7 @@ export default class InterrogationScene extends BaseScene {
 
     this.chatText = this.add.text(PX + 10, PY + 30, '', {
       fontFamily: 'monospace',
-      fontSize: '16px',
+      fontSize: '19px',
       color: C.text,
       wordWrap: { width: PW - 20 },
       lineSpacing: 6,
@@ -106,7 +106,7 @@ export default class InterrogationScene extends BaseScene {
 
     this.hintText = this.add.text(PX + 10, PY + 110, '', {
       fontFamily: 'monospace',
-      fontSize: '16px',
+      fontSize: '19px',
       color: C.dim,
       wordWrap: { width: PW - 20 },
       lineSpacing: 6,
@@ -133,15 +133,15 @@ export default class InterrogationScene extends BaseScene {
       .setStrokeStyle(1, C.border);
 
     this.add.text(ix + 4, iy + 4, '>', {
-      fontFamily: 'monospace', fontSize: '16px', color: C.green,
+      fontFamily: 'monospace', fontSize: '19px', color: C.green,
     });
 
     this.inputText = this.add.text(ix + 18, iy + 5, '', {
-      fontFamily: 'monospace', fontSize: '16px', color: C.text,
+      fontFamily: 'monospace', fontSize: '19px', color: C.text,
     });
 
     this.cursor = this.add.text(ix + 18, iy + 5, '_', {
-      fontFamily: 'monospace', fontSize: '16px', color: C.green,
+      fontFamily: 'monospace', fontSize: '19px', color: C.green,
     });
 
     this.charCount = this.add.text(ix + iw - 4, iy - 20, `0/${MAX_INPUT}`, {
