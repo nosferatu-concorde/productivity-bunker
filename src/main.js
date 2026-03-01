@@ -3,6 +3,7 @@ import InterrogationScene from './scenes/InterrogationScene.js';
 import StartScene from './scenes/StartScene.js';
 import TodoScene from './scenes/TodoScene.js';
 import ResultScene from './scenes/ResultScene.js';
+import AudioScene from './scenes/AudioScene.js';
 import CRTPipeline from './shaders/CRTPipeline.js';
 import GlitchPipeline from './shaders/GlitchPipeline.js';
 
@@ -17,7 +18,7 @@ const config = {
     width: 800,
     height: 600,
   },
-  scene: [StartScene, InterrogationScene, TodoScene, ResultScene],
+  scene: [StartScene, InterrogationScene, TodoScene, ResultScene, AudioScene],
 };
 
 new Phaser.Game(config);

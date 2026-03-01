@@ -22,8 +22,13 @@ export default class TodoScene extends BaseScene {
     super('TodoScene');
   }
 
+  preload() {
+    this.load.audio('kaching', 'assets/sounds/kaching.mp3');
+  }
+
   create() {
     super.create();
+    this._kaching = this.sound.add('kaching', { volume: 0.8 });
 
     const data = this.scene.settings.data;
     this.taskDescription = data.taskDescription || '';
@@ -107,6 +112,7 @@ export default class TodoScene extends BaseScene {
           const done = this.completed[i];
           card.xMark.setText(done ? 'X' : '');
           card.stepText.setColor(done ? C.done : C.text);
+          if (done) { this._kaching.play(); this.cameras.main.shake(120, 0.004); }
         }
       });
 

@@ -65,8 +65,19 @@ export default class ResultScene extends BaseScene {
     super('ResultScene');
   }
 
+  preload() {
+    this.load.audio('rising', 'assets/sounds/rising.mp3');
+    this.load.audio('ding', 'assets/sounds/ding.mp3');
+    this.load.audio('kaching', 'assets/sounds/kaching.mp3');
+    this.load.audio('gunshot', 'assets/sounds/gunshot.mp3');
+  }
+
   create() {
     super.create();
+    this._rising  = this.sound.add('rising',  { volume: 0.7 });
+    this._ding    = this.sound.add('ding',    { loop: true, volume: 1.4, rate: 1.5 });
+    this._kaching = this.sound.add('kaching', { volume: 0.8 });
+    this._gunshot = this.sound.add('gunshot', { volume: 0.8 });
 
     const incoming = this.scene.settings.data;
     const isDebug  = !incoming || incoming.timeUsed == null || incoming._debug === true;
@@ -109,7 +120,7 @@ export default class ResultScene extends BaseScene {
     gfx.lineBetween(width / 2, statY, width / 2, statY + 110);
 
     const bonusText = this.add.text(width / 2, PY + 252, 'EFFICIENCY BONUS  +0 pts', {
-      fontFamily: 'monospace', fontSize: '18px',
+      fontFamily: 'monospace', fontSize: '26px',
       color: underTime ? C.text : C.fail,
     }).setOrigin(0.5, 0);
 
@@ -168,6 +179,7 @@ export default class ResultScene extends BaseScene {
     const zoomIn  = (t) => this.tweens.add({ targets: t, scale: ZOOM, duration: ZOOM_MS, ease: 'Sine.easeOut' });
     const zoomOut = (t) => this.tweens.add({ targets: t, scale: 1,    duration: ZOOM_MS, ease: 'Sine.easeOut' });
 
+    const runSequence = () => {
     zoomIn(usedVal);
     this._slotReveal(usedVal, fmtTime(timeUsed), () => {
       zoomOut(usedVal);
@@ -176,23 +188,34 @@ export default class ResultScene extends BaseScene {
         onComplete: () => {
           this._slotReveal(savedVal, savedStr, () => {
             zoomOut(savedVal);
-            this._animateBonus(bonusText, bonusPct, underTime, () => {
-              this.tweens.add({
-                targets: bonusText, scale: ZOOM, duration: ZOOM_MS, ease: 'Sine.easeOut',
-                onComplete: () => {
+            this._ding.play();
+            this.cameras.main.shake(200, 0.005);
+            this.tweens.add({
+              targets: bonusText, scale: 1.8, duration: ZOOM_MS, ease: 'Sine.easeOut',
+              onComplete: () => {
+                this._ding.stop();
+                this._animateBonus(bonusText, bonusPct, underTime, () => {
+                  this._kaching.play();
                   zoomOut(bonusText);
                   this.time.delayedCall(ZOOM_MS + 200, () => {
                     this._showTickets(steps, () => {
                       this.tweens.add({ targets: btn, alpha: 1, duration: 300 });
                     });
                   });
-                },
-              });
+                });
+              },
             });
           });
         },
       });
     });
+    }; // end runSequence
+
+    if (this.sound.locked) {
+      this.sound.once('unlocked', runSequence);
+    } else {
+      runSequence();
+    }
   }
 
   // ── Ticket sequence ───────────────────────────────────────────────────────
@@ -225,6 +248,7 @@ export default class ResultScene extends BaseScene {
         checkbox.setColor(C.text);
         label.setColor(C.text);
         box.setStrokeStyle(1, 0x222222);
+        this._gunshot.play();
         this.cameras.main.shake(70, 0.003);
         this.tweens.add({
           targets: all, scale: 1.04, duration: 80,
@@ -288,6 +312,8 @@ export default class ResultScene extends BaseScene {
       }
 
       let elapsed = 0;
+      this._ding.play();
+      this.cameras.main.shake(150, 0.004);
       textObj.setText(display(idx, DIGITS[0]));
 
       const ev = this.time.addEvent({
@@ -298,6 +324,7 @@ export default class ResultScene extends BaseScene {
           textObj.setText(display(idx, DIGITS[Math.floor(Math.random() * DIGITS.length)]));
           if (elapsed >= CYCLE_MS) {
             ev.destroy();
+            this._ding.stop();
             locked[idx] = chars[idx];
             idx++;
             next();
