@@ -1,5 +1,7 @@
 # Productivity Bunker
 
+A prototype of a todo list app with idle game elements. Built in Mistral AI Worldwide Hackthon in February 28th - March 1st.
+
 > YEAR 2031. THE SURFACE IS GONE.
 
 You command BUNKER-7 — 847 survivors, dwindling oxygen, one merciless overseer: THE OVERLORD.
